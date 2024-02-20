@@ -29,7 +29,7 @@ static inline u32 lzcnt_nonzero(u32 v) {
     _BitScanReverse(&retVal, v);
     return 31 - retVal;
 #else
-    return __builtin_clz(v);
+    return (u32)__builtin_clz(v);
 #endif
 }
 
@@ -39,7 +39,7 @@ static inline u32 tzcnt_nonzero(u32 v) {
     _BitScanForward(&retVal, v);
     return retVal;
 #else
-    return __builtin_ctz(v);
+    return (u32)__builtin_ctz(v);
 #endif
 }
 
@@ -143,7 +143,9 @@ u32 findLowestSetBitAfter(u32 bitMask, u32 startBitIndex) {
 }
 
 // Allocator...
-void initAllocator(Allocator* allocator, const u32 size, const u32 max_allocs) {
+void initOffsetAllocator(Allocator* allocator,
+                         const u32 size,
+                         const u32 max_allocs) {
     Allocator temp_allocator = {.m_size = size,
                                 .m_maxAllocs = max_allocs,
                                 .m_nodes = NULL,
@@ -152,12 +154,12 @@ void initAllocator(Allocator* allocator, const u32 size, const u32 max_allocs) {
     *allocator = temp_allocator;
 
     if (sizeof(NodeIndex) == 2) {
-        ASSERT(maxAllocs <= 65536);
+        ASSERT(max_allocs <= 65536);
     }
-    resetAllocator(allocator);
+    resetOffsetAllocator(allocator);
 }
 
-void resetAllocator(Allocator* allocator) {
+void resetOffsetAllocator(Allocator* allocator) {
     allocator->m_freeStorage = 0;
     allocator->m_usedBinsTop = 0;
     allocator->m_freeOffset = allocator->m_maxAllocs - 1;
@@ -196,12 +198,12 @@ void resetAllocator(Allocator* allocator) {
     insertNodeIntoBin(allocator, allocator->m_size, 0);
 }
 
-void terminateAllocator(Allocator* allocator) {
+void terminateOffsetAllocator(Allocator* allocator) {
     free(allocator->m_nodes);
     free(allocator->m_freeNodes);
 }
 
-Allocation allocate(Allocator* allocator, const u32 size) {
+Allocation offsetAllocateAllocate(Allocator* allocator, const u32 size) {
     // Out of allocations?
     //
     Allocation res = EmptyAllocation;
@@ -254,8 +256,8 @@ Allocation allocate(Allocator* allocator, const u32 size) {
         allocator->m_nodes[node->binListNext].binListPrev = NODE_UNUSED;
     allocator->m_freeStorage -= nodeTotalSize;
 #ifdef DEBUG_VERBOSE
-    printf("Free storage: %u (-%u) (allocate)\n", allocator->m_freeStorage,
-           nodeTotalSize);
+    printf("Free storage: %u (-%u) (offsetAllocateAllocate)\n",
+           allocator->m_freeStorage, nodeTotalSize);
 #endif
 
     // Bin empty?
@@ -302,7 +304,7 @@ void freeAllocation(Allocator* allocator, Allocation allocation) {
     Node node = &(allocator->m_nodes[nodeIndex]);
 
     // Double delete check
-    ASSERT(node.used == true);
+    ASSERT(node->used == true);
 
     // Merge with neighbors...
     u32 offset = node->dataOffset;
@@ -319,7 +321,7 @@ void freeAllocation(Allocator* allocator, Allocation allocation) {
         // Remove node from the bin linked list and put it in the freelist
         removeNodeFromBin(allocator, node->neighborPrev);
 
-        ASSERT(prevNode.neighborNext == nodeIndex);
+        ASSERT(prevNode->neighborNext == nodeIndex);
         node->neighborPrev = prevNode->neighborPrev;
     }
 
@@ -458,8 +460,7 @@ static void removeNodeFromBin(Allocator* allocator, const u32 nodeIndex) {
 #endif
 }
 
-static u32 allocationSize(const Allocator* allocator,
-                          const Allocation allocation) {
+u32 allocationSize(const Allocator* allocator, const Allocation allocation) {
     if (allocation.metadata == NO_SPACE)
         return 0;
     if (!allocator->m_nodes)

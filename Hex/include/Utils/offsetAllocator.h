@@ -58,12 +58,16 @@ typedef struct {
     u32 m_freeOffset;
 } Allocator;
 
-void initAllocator(Allocator* allocator, const u32 size, const u32 max_allocs);
+void initOffsetAllocator(Allocator* allocator,
+                         const u32 size,
+                         const u32 max_allocs);
 
-void resetAllocator(Allocator* allocator);
+void resetOffsetAllocator(Allocator* allocator);
 
-void terminateAllocator(Allocator* allocator);
+void terminateOffsetAllocator(Allocator* allocator);
 
-Allocation allocate(Allocator* allocator, const u32 size);
+Allocation offsetAllocateAllocate(Allocator* allocator, const u32 size);
 
 void freeAllocation(Allocator* allocator, Allocation allocation);
+
+u32 allocationSize(const Allocator* allocator, const Allocation allocation);

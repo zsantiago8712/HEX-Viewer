@@ -239,4 +239,14 @@ Temporary Items
 .history
 .ionide
 
+*.log
+/.cache
+/.vscode
+
+/bin
+/obj
+
+compile_commands.json
+*.make
+MakeFile
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,clion,c++,macos,c

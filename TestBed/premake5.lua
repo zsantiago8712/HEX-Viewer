@@ -8,10 +8,9 @@ objdir("%{wks.location}/obj/%{cfg.buildcfg}")
 
 files({ "**.c", "**.h" })
 
-includedirs({ "../ByteBook/include" })
+includedirs({ "../Hex/include" })
 
-filter({ "options:api=ncurses" })
-links({ "ByteBookEditor", "ncurses" })
+links({ "Hex", "ncurses" })
 
 filter("configurations:Debug")
 defines({ "DEBUG" })
