@@ -4,6 +4,8 @@
 #include "Utils/clog.h"
 #include "Utils/dynamicAllocator.h"
 
+static void updateApp(App* app);
+
 void initApp(App* app) {
     App temp = EmptyApp;
     *app = temp;
@@ -22,35 +24,33 @@ void initApp(App* app) {
         exit(-1);
     }
 
-    // if (!(app->window_hex.config =
-    //           createAndConfigureWindowBuffer("HEX VIEWER"))) {
-    //     LOG_FATAL("Failed to create window buffer 'HEX VIEWER'!");
-    //     terminateNcurses();
-    //     terminateDynamicAllocator();
-    //     terminateLogger();
-    //     exit(-1);
-    // }
+    if (!createAndConfigureWindowBuffer(&app->window_padding,
+                                        "PADDING VIEWER")) {
+        LOG_FATAL("Failed to create window buffer 'PADDING VIEWER'!");
+        terminateWindowBuffer(&app->window_hex);
+        terminateWindowBuffer(&app->window_ascii);
+        terminateNcurses();
+        terminateDynamicAllocator();
+        terminateLogger();
+        exit(-1);
+    }
 
-    // if (!(app->window_ascii.config =
-    //           createAndConfigureWindowBuffer("ASCII VIEWER"))) {
-    //     LOG_FATAL("Failed to create window buffer 'ASCII VIEWER'!");
-    //     terminateWindowBuffer(&app->window_hex);
-    //     terminateNcurses();
-    //     terminateDynamicAllocator();
-    //     terminateLogger();
-    //     exit(-1);
-    // }
+    if (!createAndConfigureWindowBuffer(&app->window_hex, "HEX VIEWER")) {
+        LOG_FATAL("Failed to create window buffer 'HEX VIEWER'!");
+        terminateNcurses();
+        terminateDynamicAllocator();
+        terminateLogger();
+        exit(-1);
+    }
 
-    // if (!(app->window_padding.config =
-    //           createAndConfigureWindowBuffer("PADDING VIEWER"))) {
-    //     LOG_FATAL("Failed to create window buffer 'PADDING VIEWER'!");
-    //     terminateWindowBuffer(&app->window_hex);
-    //     terminateWindowBuffer(&app->window_ascii);
-    //     terminateNcurses();
-    //     terminateDynamicAllocator();
-    //     terminateLogger();
-    //     exit(-1);
-    // }
+    if (!createAndConfigureWindowBuffer(&app->window_ascii, "ASCII VIEWER")) {
+        LOG_FATAL("Failed to create window buffer 'ASCII VIEWER'!");
+        terminateWindowBuffer(&app->window_hex);
+        terminateNcurses();
+        terminateDynamicAllocator();
+        terminateLogger();
+        exit(-1);
+    }
 
     if (!createAndConfigureWindowTreeFile(&app->window_tree_file)) {
         LOG_FATAL("Failed to create window tree file!");
@@ -78,8 +78,14 @@ void terminateApp(App* app) {
 }
 
 void runApp(App* app) {
-    while (!app->is_running) {
+    while (app->is_running) {
         // app->is_running = false;
-        // updateApp(app);
+        updateApp(app);
     }
+}
+
+static void updateApp(App* app) {
+    app->is_running =
+        processKey(&app->window_tree_file, &app->window_padding,
+                   &app->window_hex, &app->window_ascii, &app->cursor);
 }

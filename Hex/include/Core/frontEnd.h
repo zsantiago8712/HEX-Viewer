@@ -30,13 +30,13 @@ typedef struct {
 } WindowTreeFile;
 
 typedef struct {
-    u32 x_position;
-    u32 y_position;
+    i32 x_position;
+    i32 y_position;
 } Cursor;
 
 bool initNcurses(void);
 
-WindowConfig createAndConfigureWindowBuffer(const char* title);
+bool createAndConfigureWindowBuffer(WindowBuffer* buffer, const char* title);
 bool createAndConfigureWindowTreeFile(WindowTreeFile* tree_file);
 
 void terminateWindowBuffer(WindowBuffer* buffer);
@@ -44,3 +44,8 @@ void terminateWindowBuffer(WindowBuffer* buffer);
 void terminateWindowTreeFile(WindowTreeFile* tree_file);
 
 void terminateNcurses(void);
+bool processKey(WindowTreeFile* tree_file,
+                WindowBuffer* padding,
+                WindowBuffer* hex,
+                WindowBuffer* ascii,
+                Cursor* cursor);

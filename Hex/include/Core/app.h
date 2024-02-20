@@ -4,8 +4,8 @@
 
 #define EmptyApp                                                        \
     {                                                                   \
-        false, EmptyWindowBuffer, EmptyWindowBuffer, EmptyWindowBuffer, \
-            EmptyWindowTreeFile                                         \
+        true, EmptyWindowBuffer, EmptyWindowBuffer, EmptyWindowBuffer, \
+            EmptyWindowTreeFile, EmptyCursor                                         \
     }
 
 typedef struct App {
@@ -14,6 +14,7 @@ typedef struct App {
     WindowBuffer window_ascii;
     WindowBuffer window_padding;
     WindowTreeFile window_tree_file;
+    Cursor cursor;
 } App;
 
 void initApp(App* app);

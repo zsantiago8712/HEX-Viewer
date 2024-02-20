@@ -4,15 +4,15 @@
 #include "Utils/clog.h"
 #include "Utils/dynamicAllocator.h"
 
-bool getFilesFromDirectory(const char* path,
-                           char*** files_in_directory,
-                           u32* num_files,
-                           u32* largest_file_name_length) {
+char** getFilesFromDirectory(const char* path,
+                             u32* num_files,
+                             u32* largest_file_name_length) {
     DIR* dir;
     struct dirent* ent;
     u64 temp = 0;
     u32 size_array = 0;
     u32 i = 0;
+    char** files_in_directory;
 
     dir = opendir(path);
 
@@ -22,7 +22,7 @@ bool getFilesFromDirectory(const char* path,
 
     if (dir == NULL) {
         LOG_FATAL("No se puede abrir el directorio");
-        return false;
+        return NULL;
     }
 
     // Leer las entradas del directorio
@@ -40,7 +40,7 @@ bool getFilesFromDirectory(const char* path,
         *largest_file_name_length = 0;
         closedir(dir);
         LOG_INFO("No hay archivos en el directorio");
-        return true;
+        return NULL;
     }
 
     *largest_file_name_length += 1;
@@ -50,8 +50,8 @@ bool getFilesFromDirectory(const char* path,
 
     rewinddir(dir);
 
-    *files_in_directory = (char**)allocate(size_array);
-    if (*files_in_directory == NULL) {
+    files_in_directory = (char**)allocate(size_array);
+    if (files_in_directory == NULL) {
         LOG_FATAL(
             "No se pudo reservar memoria para los archivos dentro del "
             "directorio");
@@ -59,15 +59,15 @@ bool getFilesFromDirectory(const char* path,
         return false;
     }
 
-    char* start_location = (char*)(*files_in_directory + *num_files);
+    char* start_location = (char*)(files_in_directory + *num_files);
     u32 s;
 
     while ((ent = readdir(dir)) != NULL) {
         if (ent->d_type == DT_REG) {
             s = (u32)strlen(ent->d_name);
-            (*files_in_directory)[i] = start_location;
-            strcpy((files_in_directory[0][i]), ent->d_name);
-            files_in_directory[0][i][s] = '\0';
+            files_in_directory[i] = start_location;
+            strcpy(files_in_directory[i], ent->d_name);
+            files_in_directory[i][s] = '\0';
             start_location += *largest_file_name_length;
             i++;
         }
@@ -75,6 +75,5 @@ bool getFilesFromDirectory(const char* path,
 
     // Cerrar el directorio
     closedir(dir);
-
-    return true;
+    return files_in_directory;
 }

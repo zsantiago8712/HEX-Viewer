@@ -5,6 +5,8 @@
 #include "Utils/clog.h"
 #include "Utils/dynamicAllocator.h"
 
+#define MAX_WINDOW_BUFFER 3
+
 static void showFilesInDirectory(WindowTreeFile* tree_file);
 
 struct _WindowConfig {
@@ -35,70 +37,75 @@ bool initNcurses(void) {
     return true;
 }
 
-// TODO: arreglar los tamaños de las venetas, se estan encimando
-WindowConfig createAndConfigureWindowBuffer(const char* title) {
+bool createAndConfigureWindowBuffer(WindowBuffer* buffer, const char* title) {
+    static i32 window_count = 0;
+
+    assert(window_count < MAX_WINDOW_BUFFER);
+
     i32 screen_height = 0;
     i32 screen_width = 0;
-
-    WindowConfig config = NULL;
 
     getmaxyx(stdscr, screen_height, screen_width);
     assert(screen_height > 0 && screen_width > 0);
 
-    config = (WindowConfig)allocate(sizeof(struct _WindowConfig));
+    buffer->config = (WindowConfig)allocate(sizeof(struct _WindowConfig));
 
-    if (config == NULL) {
+    if (buffer->config == NULL) {
         LOG_FATAL("Failed to allocate memory for window config");
         return false;
     }
 
-    // TODO: quiero que el tamaño de las 3 panatallas sea el mismo, que se
-    // dividan"(tamaño - (tamaño / 6)) / 3"
     struct _WindowConfig temp_config = {
         .title = (char*)title,
-        .width = screen_height,
-        .height = (screen_width - (screen_width / 6)) / 3,
+        .width = (screen_width - (screen_width / 6)) / 3,
+        .height = screen_height,
         .y_position = 0,
-        .x_position = screen_width / 6,
+        .x_position =
+            screen_width / 6 +
+            (window_count * ((screen_width - (screen_width / 6)) / 3)),
         .is_active = false,
         .window = NULL,
         .scroller = NULL};
 
-    *config = temp_config;
+    *buffer->config = temp_config;
 
-    config->window = newwin(config->height, config->width, config->y_position,
-                            config->x_position);
+    buffer->config->window =
+        newwin(buffer->config->height, buffer->config->width,
+               buffer->config->y_position, buffer->config->x_position);
 
-    if (config->window == NULL) {
+    if (buffer->config->window == NULL) {
         LOG_FATAL("Failed to create window");
-        deallocate(config, sizeof(struct _WindowConfig));
+        deallocate(buffer->config, sizeof(struct _WindowConfig));
         return false;
     }
 
-    config->scroller =
-        derwin(config->window, config->height - 1, config->width - 1, 1, 1);
+    buffer->config->scroller =
+        derwin(buffer->config->window, buffer->config->height - 1,
+               buffer->config->width - 1, 1, 1);
 
-    if (config->scroller == NULL) {
+    if (buffer->config->scroller == NULL) {
         LOG_FATAL("Failed to create window");
-        delwin(config->window);
-        deallocate(config, sizeof(struct _WindowConfig));
+        delwin(buffer->config->window);
+        deallocate(buffer->config, sizeof(struct _WindowConfig));
         return false;
     }
 
-    keypad(config->scroller, TRUE);
-    scrollok(config->scroller, TRUE);
+    keypad(buffer->config->scroller, TRUE);
+    scrollok(buffer->config->scroller, TRUE);
 
-    box(config->window, 0, 0);
-    mvwprintw(config->window, 1, 1, config->title);
-    mvwhline(config->window, 2, 1, ACS_HLINE, config->width - 2);
+    box(buffer->config->window, 0, 0);
+    mvwprintw(buffer->config->window, 1, 1, buffer->config->title);
+    mvwhline(buffer->config->window, 2, 1, ACS_HLINE,
+             buffer->config->width - 2);
 
-    wrefresh(config->window);
-    wrefresh(config->scroller);
+    wrefresh(buffer->config->window);
+    wrefresh(buffer->config->scroller);
 
     LOG_INFO("Window tree file created");
-    return config;
+    window_count++;
+    return true;
 }
-// TODO: hacer la vemtana aun mas pequeña
+
 bool createAndConfigureWindowTreeFile(WindowTreeFile* tree_file) {
     i32 screen_height = 0;
     i32 screen_width = 0;
@@ -158,6 +165,8 @@ bool createAndConfigureWindowTreeFile(WindowTreeFile* tree_file) {
 
     showFilesInDirectory(tree_file);
 
+    wmove(tree_file->config->scroller, 0, 0);
+
     LOG_INFO("Window tree file created");
     return true;
 }
@@ -188,13 +197,65 @@ void terminateNcurses(void) {
     LOG_INFO("Ncurses terminated");
 }
 
-static void showFilesInDirectory(WindowTreeFile* tree_file) {
-    // TODO: mostrar los archivos
+bool processKey(WindowTreeFile* tree_file,
+                WindowBuffer* padding,
+                WindowBuffer* hex,
+                WindowBuffer* ascii,
+                Cursor* cursor) {
+    int key = '\0';
+    while ((key = wgetch(tree_file->config->scroller)) != '\n') {
+        LOG_DEBUG("key pressed: %d  [%#x]-> '%s'", key, key, keyname(key));
+        switch (key) {
+            case KEY_UP:
+                if (cursor->y_position - 1 < 0) {
+                    cursor->y_position = (i32)tree_file->num_files - 1 >= 0
+                                             ? (i32)tree_file->num_files - 1
+                                             : 0;
+                } else {
+                    cursor->y_position--;
+                }
 
-    if (!getFilesFromDirectory(
-            tree_file->current_directory, &tree_file->files_in_directory,
-            &tree_file->num_files, &tree_file->largest_file_name_length) ||
-        tree_file->num_files <= 0) {
+                wmove(tree_file->config->scroller, cursor->y_position,
+                      cursor->x_position);
+                break;
+            case KEY_DOWN:
+                if (cursor->y_position + 1 > (i32)tree_file->num_files - 1) {
+                    cursor->y_position = 0;
+                } else {
+                    cursor->y_position++;
+                }
+                wmove(tree_file->config->scroller, cursor->y_position,
+                      cursor->x_position);
+                break;
+            case 'q':
+                return false;
+                break;
+
+            // TODO: implementar funcion que lea el archivo seleccionado y
+            // los escriba sobre el buffer
+            case KEY_ENTER:
+                break;
+
+            default:
+                break;
+        }
+        wrefresh(padding->config->scroller);
+        wrefresh(hex->config->scroller);
+        wrefresh(ascii->config->scroller);
+        wrefresh(tree_file->config->scroller);
+    }
+
+    return true;
+}
+
+/* -------------------- Static functions ------------------- */
+
+static void showFilesInDirectory(WindowTreeFile* tree_file) {
+    tree_file->files_in_directory = getFilesFromDirectory(
+        tree_file->current_directory, &tree_file->num_files,
+        &tree_file->largest_file_name_length);
+
+    if (tree_file->files_in_directory == NULL || tree_file->num_files <= 0) {
         return;
     }
 
