@@ -11,6 +11,8 @@ void initApp(App* app) {
     *app = temp;
 
     initLogger(L_FILE);
+    setLogFile("HexViewer.log");
+
     if (!initDynamicAllocator(MEGABYTES_TO_BYTES(500))) {
         LOG_FATAL("Failed to initialize dynamic memory allocator!");
         terminateLogger();
@@ -79,7 +81,6 @@ void terminateApp(App* app) {
 
 void runApp(App* app) {
     while (app->is_running) {
-        // app->is_running = false;
         updateApp(app);
     }
 }
