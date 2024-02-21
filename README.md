@@ -13,6 +13,9 @@ Para compilar y ejecutar este proyecto, necesitarás:
 
 ## Uso del Programa
 
+![CleanShot 2024-02-21 at 11 56 21](https://github.com/zsantiago8712/HEX-Viewer/assets/59674428/e373e62f-119f-44ff-8812-00e570442c16)
+
+
 1. Clonar el repositorio:
 
    ```shell
@@ -60,6 +63,7 @@ make config=release
 ./bin/Release/TestBed
 ```
 
+
 ## Créditos y Agradecimientos
 
 Este proyecto hace uso de las siguientes librerías, las cuales ya están incluidas en el código fuente:
@@ -67,6 +71,7 @@ Este proyecto hace uso de las siguientes librerías, las cuales ya están inclui
 - `clog`: una librería de logging desarrollada por mi, que facilita la generación de registros detallados de la ejecución del programa. El código fuente está disponible en `Utils/clog`.
 - `offsetAllocator`: una librería de gestión de memoria, originalmente escrita por [sebbi](https://github.com/sebbbi/OffsetAllocator) y migrada a C por mi. Esta librería se utiliza para asignar memoria de manera eficiente y está integrada en `Utils/offsetAllocator`.
 
-## Contribuciones
+## Contribucio![CleanShot 2024-02-21 at 11 56 21](https://github.com/zsantiago8712/HEX-Viewer/assets/59674428/0f8b18ab-aab4-4f44-be26-6643c8aa4cd2)
+nes
 
 Las contribuciones son bienvenidas. Si deseas mejorar el proyecto, por favor revisa las pautas para contribuir en `CONTRIBUTING.md`.
