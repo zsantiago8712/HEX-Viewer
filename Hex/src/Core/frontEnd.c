@@ -1,6 +1,7 @@
 #include "Core/frontEnd.h"
 #include <assert.h>
 #include <curses.h>
+#include <string.h>
 #include "Core/backEnd.h"
 #include "Utils/clog.h"
 #include "Utils/dynamicAllocator.h"
@@ -8,6 +9,11 @@
 #define MAX_WINDOW_BUFFER 3
 
 static void showFilesInDirectory(WindowTreeFile* tree_file);
+
+static void showFileContent(WindowBuffer* padding,
+                            WindowBuffer* hex,
+                            WindowBuffer* ascii,
+                            const char* files_selected);
 
 struct _WindowConfig {
     char* title;
@@ -55,17 +61,44 @@ bool createAndConfigureWindowBuffer(WindowBuffer* buffer, const char* title) {
         return false;
     }
 
-    struct _WindowConfig temp_config = {
-        .title = (char*)title,
-        .width = (screen_width - (screen_width / 6)) / 3,
-        .height = screen_height,
-        .y_position = 0,
-        .x_position =
-            screen_width / 6 +
-            (window_count * ((screen_width - (screen_width / 6)) / 3)),
-        .is_active = false,
-        .window = NULL,
-        .scroller = NULL};
+    struct _WindowConfig temp_config = {.title = (char*)title,
+                                        .width = 0,
+                                        .height = screen_height,
+                                        .y_position = 0,
+                                        .x_position = 0,
+                                        .is_active = false,
+                                        .window = NULL,
+                                        .scroller = NULL};
+
+    i32 first_width = screen_width / 5;
+    i32 remaining_width = screen_width - first_width;
+    i32 width_for_calculation = remaining_width / 2;
+
+    i32 second_width = width_for_calculation / 2;
+    i32 third_width = width_for_calculation;
+    i32 fourth_width = remaining_width - (second_width + third_width);
+
+    i32 second_x = first_width;
+    i32 third_x = second_x + second_width;
+    i32 fourth_x = third_x + third_width;
+
+    switch (window_count) {
+        case 0:  // Primera ventana
+            temp_config.width = second_width;
+            temp_config.x_position = second_x;
+            break;
+        case 1:  // Segunda ventana
+            temp_config.width = third_width;
+            temp_config.x_position = third_x;
+            break;
+        case 2:  // Cuarta ventana
+            temp_config.width = fourth_width;
+            temp_config.x_position = fourth_x;
+            break;
+        default:
+            return false;
+            break;
+    }
 
     *buffer->config = temp_config;
 
@@ -80,8 +113,8 @@ bool createAndConfigureWindowBuffer(WindowBuffer* buffer, const char* title) {
     }
 
     buffer->config->scroller =
-        derwin(buffer->config->window, buffer->config->height - 1,
-               buffer->config->width - 1, 1, 1);
+        derwin(buffer->config->window, buffer->config->height - 5,
+               buffer->config->width - 3, 3, 2);
 
     if (buffer->config->scroller == NULL) {
         LOG_FATAL("Failed to create window");
@@ -101,8 +134,8 @@ bool createAndConfigureWindowBuffer(WindowBuffer* buffer, const char* title) {
     wrefresh(buffer->config->window);
     wrefresh(buffer->config->scroller);
 
-    LOG_INFO("Window tree file created");
     window_count++;
+    LOG_INFO("Window tree file created");
     return true;
 }
 
@@ -121,7 +154,7 @@ bool createAndConfigureWindowTreeFile(WindowTreeFile* tree_file) {
     }
 
     struct _WindowConfig temp_config = {.title = "Tree File",
-                                        .width = screen_width / 6,
+                                        .width = screen_width / 5,
                                         .height = screen_height,
                                         .y_position = 0,
                                         .x_position = 0,
@@ -184,7 +217,7 @@ void terminateWindowTreeFile(WindowTreeFile* tree_file) {
     delwin(tree_file->config->window);
     delwin(tree_file->config->window);
 
-    // TODO: encontrar una manwera mas exacat de desalojar los archivos
+    // TODO: encontrar una manwera mas exacta de desalojar los archivos
     // deallocate(tree_file->files_in_directory,
     //            sizeof(char*) * tree_file->num_files);
 
@@ -203,7 +236,7 @@ bool processKey(WindowTreeFile* tree_file,
                 WindowBuffer* ascii,
                 Cursor* cursor) {
     int key = '\0';
-    while ((key = wgetch(tree_file->config->scroller)) != '\n') {
+    while ((key = wgetch(tree_file->config->scroller)) != ERR) {
         LOG_DEBUG("key pressed: %d  [%#x]-> '%s'", key, key, keyname(key));
         switch (key) {
             case KEY_UP:
@@ -214,7 +247,6 @@ bool processKey(WindowTreeFile* tree_file,
                 } else {
                     cursor->y_position--;
                 }
-
                 wmove(tree_file->config->scroller, cursor->y_position,
                       cursor->x_position);
                 break;
@@ -231,9 +263,10 @@ bool processKey(WindowTreeFile* tree_file,
                 return false;
                 break;
 
-            // TODO: implementar funcion que lea el archivo seleccionado y
-            // los escriba sobre el buffer
-            case KEY_ENTER:
+            case '\n':
+                showFileContent(
+                    padding, hex, ascii,
+                    tree_file->files_in_directory[cursor->y_position]);
                 break;
 
             default:
@@ -249,7 +282,6 @@ bool processKey(WindowTreeFile* tree_file,
 }
 
 /* -------------------- Static functions ------------------- */
-
 static void showFilesInDirectory(WindowTreeFile* tree_file) {
     tree_file->files_in_directory = getFilesFromDirectory(
         tree_file->current_directory, &tree_file->num_files,
@@ -265,4 +297,37 @@ static void showFilesInDirectory(WindowTreeFile* tree_file) {
     }
 
     wrefresh(tree_file->config->scroller);
+}
+
+static void showFileContent(WindowBuffer* padding,
+                            WindowBuffer* hex,
+                            WindowBuffer* ascii,
+                            const char* files_selected) {
+    // NOTE: podria ser buena idea un multothreading aqui!
+    if (ascii->buffer != NULL) {
+        deallocate(ascii->buffer, (u32)strlen(ascii->buffer));
+        wclear(ascii->config->scroller);
+    }
+
+    if (padding->buffer != NULL) {
+        deallocate(padding->buffer, (u32)strlen(padding->buffer));
+        wclear(padding->config->scroller);
+    }
+
+    if (hex->buffer != NULL) {
+        deallocate(hex->buffer, (u32)strlen(hex->buffer));
+        wclear(hex->config->scroller);
+    }
+
+    u32 num_lines = 0;
+    u32 size_file = 0;
+    ascii->buffer = getFileContent(files_selected, &num_lines, &size_file);
+    padding->buffer = setPadding(num_lines);
+    hex->buffer = setHexContent(ascii->buffer, num_lines, size_file);
+
+    wprintw(padding->config->scroller, "%s", padding->buffer);
+    wprintw(ascii->config->scroller, "%s", ascii->buffer);
+    wprintw(hex->config->scroller, "%s", hex->buffer);
+    LOG_DEBUG("File content ascii: %s", ascii->buffer);
+    LOG_DEBUG("File content padding: %s", padding->buffer);
 }
