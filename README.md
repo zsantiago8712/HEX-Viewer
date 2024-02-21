@@ -1,4 +1,5 @@
-# Manual de Uso del Repositorio
+# Manual de Uso de HEX-Viewer
+![CleanShot 2024-02-21 at 11 46 13](https://github.com/zsantiago8712/HEX-Viewer/assets/59674428/68b26684-eb8c-47c5-9f16-258b8dc7d308)
 
 ## Introducción
 
