@@ -7,6 +7,7 @@
 
 #define MAX_ALLOCS 1024 * 128
 #define MAX_ALLOCATIONS 100
+
 typedef struct {
     Allocation allocation;
     void* mem_block;

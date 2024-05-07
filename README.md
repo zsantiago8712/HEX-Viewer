@@ -7,9 +7,7 @@ Este manual proporciona instrucciones para el uso del repositorio, que permite l
 
 ## Requisitos Previos
 
-Para compilar y ejecutar este proyecto, necesitarás:
-
-- [Premake](https://premake.github.io/download.html): una herramienta de configuración de proyectos utilizada para generar makefiles y proyectos de solución para diferentes sistemas y compiladores.
+Antes de comenzar, asegúrate de tener instalado xmake en tu sistema. xmake es un sistema de construcción de proyectos multiplataforma. Si aún no lo has instalado, puedes encontrar las instrucciones de instalación en https://xmake.io.
 
 ## Uso del Programa
 
@@ -28,39 +26,20 @@ Para compilar y ejecutar este proyecto, necesitarás:
    cd [Nombre del Repositorio]
    ```
 
-3. Generar los makefiles o proyectos de solución con Premake:
+3. Para la construcción y la compilación del proyecto:
 
    ```shell
-   premake5 gmake2
+   xmake
    ```
 
-4. Compila el programa
 
-### Para compilar en modo Debug
-
-```shell
-make
-```
-
-### Para compilar en modo Release
-
-```shell
-make config=release
-```
-
-5. Ejecutar el programa
+4. Ejecutar el programa
    _Se recomineda tener tu terminal en pantalla completa sobre todo si quieres leer archivos grandes_
 
 ### Para ejecutar en modo Debug
 
 ```shell
-./bin/Debug/TestBed
-```
-
-### Para ejecutar en modo Release
-
-```shell
-./bin/Release/TestBed
+xmake run
 ```
 
 

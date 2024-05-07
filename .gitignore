@@ -246,6 +246,10 @@ Temporary Items
 /bin
 /obj
 
+/.xmake
+/build
+
+
 compile_commands.json
 *.make
 MakeFile
